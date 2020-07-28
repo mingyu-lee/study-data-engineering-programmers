@@ -1,4 +1,4 @@
--- 월별 MAU Counting
+-- MAU(Monthly Active User) 구하기
 select
     to_char(ST.TS, 'YYYY-MM') as YEAR_MONTH
   , count(distinct(USC.USERID)) as ACTIVE_USER
