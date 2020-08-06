@@ -8,7 +8,7 @@ import configparser
 import psycopg2
 
 config = configparser.ConfigParser()
-config.read('../config.ini')
+config.read('../../config.ini')
 
 user = config['REDSHIFT']['USER']
 password = config['REDSHIFT']['PASSWORD']
@@ -87,6 +87,7 @@ SELECT * FROM raw_data.session_timestamp LIMIT 10
 
 
 
+---
 ### 실습 과제 1
 #### 오늘 살펴본 SQL 실습 및 요약
 ```sql
@@ -212,7 +213,7 @@ from RAW_DATA.USER_SESSION_CHANNEL         USC
 where USERID = 251
 ;
 ```
-
+---
 ## 실습 과제 2
 ### Gross Revenue 가장 큰 UserID 10개 찾기
 * refund 포함
@@ -457,6 +458,7 @@ limit 10
 
 
 
+---
 ## 실습과제 3
 ### 채널별 월 매출액 테이블 만들기
 - session_timestamp, user_session_channel, channel, transaction 테이블 사용
@@ -539,7 +541,7 @@ from (
                   C.CHANNELNAME
                 , left(ST.TS, 7)                                                                     as YEAR_MONTH
                 , count(distinct USERID)                                                             as UNIQUE_USERS
-                , count(distinct case when AMOUNT is not null and REFUNDED is false then USERID end) as PAID_USERS
+                , count(distinct case when AMOUNT > 0 then USERID end) as PAID_USERS
                 , sum(nvl(AMOUNT, 0))                                                                as GROSS_REVENUE
                 , sum(case when REFUNDED is false then AMOUNT else 0 end)                            as NET_REVENUE
               from RAW_DATA.CHANNEL                        C
@@ -624,6 +626,537 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
      * postgresql://leemingyu05:***@grepp-data.cduaw970ssvt.ap-northeast-2.redshift.amazonaws.com:5439/dev
     43 rows affected.
     49 rows affected.
+    Done.
+    Done.
+    49 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>year_month</th>
+        <th>channelname</th>
+        <th>unique_users</th>
+        <th>paid_users</th>
+        <th>conversion_rate</th>
+        <th>gross_revenue</th>
+        <th>net_revenue</th>
+    </tr>
+    <tr>
+        <td>2019-05</td>
+        <td>Google</td>
+        <td>253</td>
+        <td>10</td>
+        <td>3.95</td>
+        <td>580</td>
+        <td>580</td>
+    </tr>
+    <tr>
+        <td>2019-05</td>
+        <td>Naver</td>
+        <td>237</td>
+        <td>10</td>
+        <td>4.22</td>
+        <td>867</td>
+        <td>844</td>
+    </tr>
+    <tr>
+        <td>2019-05</td>
+        <td>TIKTOK</td>
+        <td>0</td>
+        <td>0</td>
+        <td>0.00</td>
+        <td>0</td>
+        <td>0</td>
+    </tr>
+    <tr>
+        <td>2019-06</td>
+        <td>Facebook</td>
+        <td>414</td>
+        <td>22</td>
+        <td>5.31</td>
+        <td>1578</td>
+        <td>1578</td>
+    </tr>
+    <tr>
+        <td>2019-06</td>
+        <td>Instagram</td>
+        <td>410</td>
+        <td>20</td>
+        <td>4.88</td>
+        <td>1462</td>
+        <td>1418</td>
+    </tr>
+    <tr>
+        <td>2019-06</td>
+        <td>Organic</td>
+        <td>416</td>
+        <td>12</td>
+        <td>2.88</td>
+        <td>1129</td>
+        <td>940</td>
+    </tr>
+    <tr>
+        <td>2019-06</td>
+        <td>Youtube</td>
+        <td>400</td>
+        <td>17</td>
+        <td>4.25</td>
+        <td>1042</td>
+        <td>1042</td>
+    </tr>
+    <tr>
+        <td>2019-07</td>
+        <td>Google</td>
+        <td>556</td>
+        <td>19</td>
+        <td>3.42</td>
+        <td>1558</td>
+        <td>1385</td>
+    </tr>
+    <tr>
+        <td>2019-07</td>
+        <td>Naver</td>
+        <td>553</td>
+        <td>19</td>
+        <td>3.44</td>
+        <td>1547</td>
+        <td>1547</td>
+    </tr>
+    <tr>
+        <td>2019-07</td>
+        <td>TIKTOK</td>
+        <td>0</td>
+        <td>0</td>
+        <td>0.00</td>
+        <td>0</td>
+        <td>0</td>
+    </tr>
+    <tr>
+        <td>2019-08</td>
+        <td>Facebook</td>
+        <td>611</td>
+        <td>18</td>
+        <td>2.95</td>
+        <td>1009</td>
+        <td>1009</td>
+    </tr>
+    <tr>
+        <td>2019-08</td>
+        <td>Instagram</td>
+        <td>621</td>
+        <td>26</td>
+        <td>4.19</td>
+        <td>2129</td>
+        <td>2001</td>
+    </tr>
+    <tr>
+        <td>2019-08</td>
+        <td>Organic</td>
+        <td>608</td>
+        <td>25</td>
+        <td>4.11</td>
+        <td>1643</td>
+        <td>1606</td>
+    </tr>
+    <tr>
+        <td>2019-08</td>
+        <td>Youtube</td>
+        <td>614</td>
+        <td>16</td>
+        <td>2.61</td>
+        <td>987</td>
+        <td>950</td>
+    </tr>
+    <tr>
+        <td>2019-09</td>
+        <td>Facebook</td>
+        <td>597</td>
+        <td>27</td>
+        <td>4.52</td>
+        <td>2270</td>
+        <td>2270</td>
+    </tr>
+    <tr>
+        <td>2019-09</td>
+        <td>Instagram</td>
+        <td>588</td>
+        <td>18</td>
+        <td>3.06</td>
+        <td>1260</td>
+        <td>1122</td>
+    </tr>
+    <tr>
+        <td>2019-09</td>
+        <td>Organic</td>
+        <td>592</td>
+        <td>23</td>
+        <td>3.89</td>
+        <td>1267</td>
+        <td>1267</td>
+    </tr>
+    <tr>
+        <td>2019-09</td>
+        <td>Youtube</td>
+        <td>588</td>
+        <td>15</td>
+        <td>2.55</td>
+        <td>1301</td>
+        <td>1301</td>
+    </tr>
+    <tr>
+        <td>2019-10</td>
+        <td>Google</td>
+        <td>699</td>
+        <td>29</td>
+        <td>4.15</td>
+        <td>2150</td>
+        <td>2098</td>
+    </tr>
+    <tr>
+        <td>2019-10</td>
+        <td>Naver</td>
+        <td>713</td>
+        <td>32</td>
+        <td>4.49</td>
+        <td>2695</td>
+        <td>2695</td>
+    </tr>
+    <tr>
+        <td>2019-10</td>
+        <td>TIKTOK</td>
+        <td>0</td>
+        <td>0</td>
+        <td>0.00</td>
+        <td>0</td>
+        <td>0</td>
+    </tr>
+    <tr>
+        <td>2019-11</td>
+        <td>Google</td>
+        <td>688</td>
+        <td>25</td>
+        <td>3.63</td>
+        <td>2286</td>
+        <td>2235</td>
+    </tr>
+    <tr>
+        <td>2019-11</td>
+        <td>Naver</td>
+        <td>667</td>
+        <td>23</td>
+        <td>3.45</td>
+        <td>2234</td>
+        <td>1987</td>
+    </tr>
+    <tr>
+        <td>2019-11</td>
+        <td>TIKTOK</td>
+        <td>0</td>
+        <td>0</td>
+        <td>0.00</td>
+        <td>0</td>
+        <td>0</td>
+    </tr>
+    <tr>
+        <td>2019-05</td>
+        <td>Facebook</td>
+        <td>247</td>
+        <td>11</td>
+        <td>4.45</td>
+        <td>1199</td>
+        <td>997</td>
+    </tr>
+    <tr>
+        <td>2019-05</td>
+        <td>Instagram</td>
+        <td>234</td>
+        <td>9</td>
+        <td>3.85</td>
+        <td>959</td>
+        <td>770</td>
+    </tr>
+    <tr>
+        <td>2019-05</td>
+        <td>Organic</td>
+        <td>238</td>
+        <td>15</td>
+        <td>6.30</td>
+        <td>1846</td>
+        <td>1571</td>
+    </tr>
+    <tr>
+        <td>2019-05</td>
+        <td>Youtube</td>
+        <td>244</td>
+        <td>10</td>
+        <td>4.10</td>
+        <td>529</td>
+        <td>529</td>
+    </tr>
+    <tr>
+        <td>2019-06</td>
+        <td>Google</td>
+        <td>412</td>
+        <td>13</td>
+        <td>3.16</td>
+        <td>947</td>
+        <td>947</td>
+    </tr>
+    <tr>
+        <td>2019-06</td>
+        <td>Naver</td>
+        <td>398</td>
+        <td>15</td>
+        <td>3.77</td>
+        <td>1090</td>
+        <td>1090</td>
+    </tr>
+    <tr>
+        <td>2019-06</td>
+        <td>TIKTOK</td>
+        <td>0</td>
+        <td>0</td>
+        <td>0.00</td>
+        <td>0</td>
+        <td>0</td>
+    </tr>
+    <tr>
+        <td>2019-07</td>
+        <td>Facebook</td>
+        <td>558</td>
+        <td>31</td>
+        <td>5.56</td>
+        <td>2222</td>
+        <td>2144</td>
+    </tr>
+    <tr>
+        <td>2019-07</td>
+        <td>Instagram</td>
+        <td>567</td>
+        <td>24</td>
+        <td>4.23</td>
+        <td>1896</td>
+        <td>1766</td>
+    </tr>
+    <tr>
+        <td>2019-07</td>
+        <td>Organic</td>
+        <td>557</td>
+        <td>24</td>
+        <td>4.31</td>
+        <td>1600</td>
+        <td>1600</td>
+    </tr>
+    <tr>
+        <td>2019-07</td>
+        <td>Youtube</td>
+        <td>564</td>
+        <td>34</td>
+        <td>6.03</td>
+        <td>2210</td>
+        <td>2037</td>
+    </tr>
+    <tr>
+        <td>2019-08</td>
+        <td>Google</td>
+        <td>610</td>
+        <td>23</td>
+        <td>3.77</td>
+        <td>2210</td>
+        <td>1894</td>
+    </tr>
+    <tr>
+        <td>2019-08</td>
+        <td>Naver</td>
+        <td>626</td>
+        <td>19</td>
+        <td>3.04</td>
+        <td>1829</td>
+        <td>1551</td>
+    </tr>
+    <tr>
+        <td>2019-08</td>
+        <td>TIKTOK</td>
+        <td>0</td>
+        <td>0</td>
+        <td>0.00</td>
+        <td>0</td>
+        <td>0</td>
+    </tr>
+    <tr>
+        <td>2019-09</td>
+        <td>Google</td>
+        <td>599</td>
+        <td>23</td>
+        <td>3.84</td>
+        <td>1872</td>
+        <td>1691</td>
+    </tr>
+    <tr>
+        <td>2019-09</td>
+        <td>Naver</td>
+        <td>592</td>
+        <td>21</td>
+        <td>3.55</td>
+        <td>1996</td>
+        <td>1996</td>
+    </tr>
+    <tr>
+        <td>2019-09</td>
+        <td>TIKTOK</td>
+        <td>0</td>
+        <td>0</td>
+        <td>0.00</td>
+        <td>0</td>
+        <td>0</td>
+    </tr>
+    <tr>
+        <td>2019-10</td>
+        <td>Facebook</td>
+        <td>698</td>
+        <td>28</td>
+        <td>4.01</td>
+        <td>1650</td>
+        <td>1641</td>
+    </tr>
+    <tr>
+        <td>2019-10</td>
+        <td>Instagram</td>
+        <td>707</td>
+        <td>31</td>
+        <td>4.38</td>
+        <td>2568</td>
+        <td>2395</td>
+    </tr>
+    <tr>
+        <td>2019-10</td>
+        <td>Organic</td>
+        <td>709</td>
+        <td>29</td>
+        <td>4.09</td>
+        <td>2762</td>
+        <td>2608</td>
+    </tr>
+    <tr>
+        <td>2019-10</td>
+        <td>Youtube</td>
+        <td>705</td>
+        <td>31</td>
+        <td>4.40</td>
+        <td>2492</td>
+        <td>2319</td>
+    </tr>
+    <tr>
+        <td>2019-11</td>
+        <td>Facebook</td>
+        <td>688</td>
+        <td>26</td>
+        <td>3.78</td>
+        <td>1678</td>
+        <td>1678</td>
+    </tr>
+    <tr>
+        <td>2019-11</td>
+        <td>Instagram</td>
+        <td>669</td>
+        <td>25</td>
+        <td>3.74</td>
+        <td>2116</td>
+        <td>2116</td>
+    </tr>
+    <tr>
+        <td>2019-11</td>
+        <td>Organic</td>
+        <td>677</td>
+        <td>31</td>
+        <td>4.58</td>
+        <td>2626</td>
+        <td>2255</td>
+    </tr>
+    <tr>
+        <td>2019-11</td>
+        <td>Youtube</td>
+        <td>677</td>
+        <td>44</td>
+        <td>6.50</td>
+        <td>3532</td>
+        <td>3331</td>
+    </tr>
+</table>
+
+
+
+#### 3번 문제 기영님 피드백 받은 최종 완성본
+* PAID_USERS
+    * sum() 방식을 count(distinct) 방식으로 개선
+    * REFUNDED 상관없이 AMOUNT 있을 경우 구매유저
+* CONVERSION_RATE
+    * `::` TYPE 변환 연산자 활용
+    * NULLIF 활용
+        * 나는 원 데이터쪽에 NVL을 활용한 것과 문법적 차이가 있는 것 같음
+        * NULLIF의 경우 집계 함수에도 사용할 수 있어서 더 나은 방법인 것 같음
+
+
+
+```python
+%%sql
+
+drop table if exists ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
+
+create table ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL as
+select
+    CHANNEL_MONTHS.YEAR_MONTH
+  , CHANNEL_MONTHS.CHANNELNAME
+  , nvl(UNIQUE_USERS, 0)    as UNIQUE_USERS
+  , nvl(PAID_USERS, 0)      as PAID_USERS
+  , nvl(CONVERSION_RATE, 0) as CONVERSION_RATE
+  , nvl(GROSS_REVENUE, 0)   as GROSS_REVENUE
+  , nvl(NET_REVENUE, 0)     as NET_REVENUE
+from (
+     select
+         CHANNELNAME
+       , YEAR_MONTH
+     from (
+          select distinct
+              CHANNELNAME
+          from RAW_DATA.CHANNEL
+          )     C
+          cross join
+              (
+              select distinct
+                  left(TS, 7) as YEAR_MONTH
+              from RAW_DATA.SESSION_TIMESTAMP
+              ) MONTHS
+     )           CHANNEL_MONTHS
+     left join (
+               select
+                   C.CHANNELNAME
+                 , left(ST.TS, 7)                                                                     as YEAR_MONTH
+                 , count(distinct USERID)                                                             as UNIQUE_USERS
+                 , count(distinct case when AMOUNT is not null and REFUNDED is false then USERID end) as PAID_USERS
+                 , sum(nvl(AMOUNT, 0))                                                                as GROSS_REVENUE
+                 , sum(case when REFUNDED is false then AMOUNT else 0 end)                            as NET_REVENUE
+                 , round(count(distinct case when AMOUNT is not null and REFUNDED is false then USERID end)::DECIMAL * 100 / nullif(count(distinct USERID), 0), 2) as CONVERSION_RATE
+               from RAW_DATA.CHANNEL                        C
+                    left join RAW_DATA.USER_SESSION_CHANNEL USC
+                              on C.CHANNELNAME = USC.CHANNEL
+                    left join RAW_DATA.SESSION_TRANSACTION  STR on USC.SESSIONID = STR.SESSIONID
+                    left join RAW_DATA.SESSION_TIMESTAMP    ST on USC.SESSIONID = ST.SESSIONID
+               group by 1, 2
+               order by 1, 2
+               ) DATAS
+               on CHANNEL_MONTHS.CHANNELNAME = DATAS.CHANNELNAME
+                   and CHANNEL_MONTHS.YEAR_MONTH = DATAS.YEAR_MONTH
+order by 1, 2
+;
+
+select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
+```
+
+     * postgresql://leemingyu05:***@grepp-data.cduaw970ssvt.ap-northeast-2.redshift.amazonaws.com:5439/dev
     Done.
     Done.
     49 rows affected.
