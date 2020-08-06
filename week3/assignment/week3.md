@@ -217,6 +217,8 @@ where USERID = 251
 ### Gross Revenue 가장 큰 UserID 10개 찾기
 * refund 포함
 
+### 기존 제출
+
 
 ```python
 %%sql
@@ -226,13 +228,176 @@ select
 from (
      select
          USERID
-       , SUM(case when REFUNDED is true then AMOUNT * -1 else AMOUNT end) as TOTAL_REVENUE
+       , sum(case when REFUNDED is true then AMOUNT * -1 else AMOUNT end) as TOTAL_REVENUE
      from RAW_DATA.SESSION_TRANSACTION       ST
           join RAW_DATA.USER_SESSION_CHANNEL USC on USC.SESSIONID = ST.SESSIONID
      group by 1
      ) TOP_USER_REVENUE
 order by 2 desc
 limit 10
+;
+```
+
+     * postgresql://leemingyu05:***@grepp-data.cduaw970ssvt.ap-northeast-2.redshift.amazonaws.com:5439/dev
+    10 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>userid</th>
+        <th>total_revenue</th>
+    </tr>
+    <tr>
+        <td>989</td>
+        <td>743</td>
+    </tr>
+    <tr>
+        <td>772</td>
+        <td>556</td>
+    </tr>
+    <tr>
+        <td>1615</td>
+        <td>506</td>
+    </tr>
+    <tr>
+        <td>654</td>
+        <td>488</td>
+    </tr>
+    <tr>
+        <td>1651</td>
+        <td>463</td>
+    </tr>
+    <tr>
+        <td>973</td>
+        <td>438</td>
+    </tr>
+    <tr>
+        <td>262</td>
+        <td>422</td>
+    </tr>
+    <tr>
+        <td>2682</td>
+        <td>414</td>
+    </tr>
+    <tr>
+        <td>891</td>
+        <td>412</td>
+    </tr>
+    <tr>
+        <td>1085</td>
+        <td>411</td>
+    </tr>
+</table>
+
+
+
+### 기영님 피드백
+> REFUND 필드의 값이 False 이면 netRevenue가 0이 되고 grossRevenue는 amount가 되는 것입니다.
+즉 순매출액의 경우에는 환불이 된 경우 0이 되는 것이죠.
+
+
+
+```python
+%%sql
+select
+    USERID
+  , TOTAL_REVENUE
+from (
+     select
+         USERID
+       , sum(case when REFUNDED is false then AMOUNT end) as TOTAL_REVENUE
+     from RAW_DATA.SESSION_TRANSACTION       ST
+          join RAW_DATA.USER_SESSION_CHANNEL USC on USC.SESSIONID = ST.SESSIONID
+     group by 1
+     ) TOP_USER_REVENUE
+order by 2 desc
+limit 10
+;
+```
+
+     * postgresql://leemingyu05:***@grepp-data.cduaw970ssvt.ap-northeast-2.redshift.amazonaws.com:5439/dev
+    10 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>userid</th>
+        <th>total_revenue</th>
+    </tr>
+    <tr>
+        <td>2562</td>
+        <td>None</td>
+    </tr>
+    <tr>
+        <td>1861</td>
+        <td>None</td>
+    </tr>
+    <tr>
+        <td>2702</td>
+        <td>None</td>
+    </tr>
+    <tr>
+        <td>2590</td>
+        <td>None</td>
+    </tr>
+    <tr>
+        <td>2490</td>
+        <td>None</td>
+    </tr>
+    <tr>
+        <td>233</td>
+        <td>None</td>
+    </tr>
+    <tr>
+        <td>2267</td>
+        <td>None</td>
+    </tr>
+    <tr>
+        <td>1665</td>
+        <td>None</td>
+    </tr>
+    <tr>
+        <td>538</td>
+        <td>None</td>
+    </tr>
+    <tr>
+        <td>2644</td>
+        <td>None</td>
+    </tr>
+</table>
+
+
+
+### 최종 제출
+* 피드백 쿼리의 결과가 null로 나오는데, order by 절에서 기본으로 nulls first라 sum구문에 else 0 추가
+* (order by 2 desc nulls last 해도 되지만 amount 숫자 계산이므로 null 일 경우 0 처리하는게 나은 것 같음)
+* 기영님 피드백 쿼리와 기존 제출 쿼리의 결과는 같지만, REFUNDED를 판별하는 과정이 다름
+* 기존 제출의 경우 REFUNDED 일 경우 AMOUNT * -1을 통해 (실제 환불하는 것처럼) SUM에서 환불된 경우 AMOUNT 만큼 빼준 것
+* 피드백의 경우 단순히 생각해서 REFUNDED 일 때 0이므로, REFUNDED false 인 경우에만 AMOUNT 합계 계산
+
+
+```python
+%%sql
+select
+    USERID
+  , TOTAL_REVENUE
+from (
+     select
+         USERID
+       , sum(case when REFUNDED is false then AMOUNT else 0 end) as TOTAL_REVENUE
+     from RAW_DATA.SESSION_TRANSACTION       ST
+          join RAW_DATA.USER_SESSION_CHANNEL USC on USC.SESSIONID = ST.SESSIONID
+     group by 1
+     ) TOP_USER_REVENUE
+order by 2 desc
+limit 10
+;
 ```
 
      * postgresql://leemingyu05:***@grepp-data.cduaw970ssvt.ap-northeast-2.redshift.amazonaws.com:5439/dev
@@ -307,20 +472,30 @@ limit 10
 ```python
 %%sql
 -- 채널별 월별 매출액 데이터 구하기
-    select
-        C.CHANNELNAME
-      , LEFT(ST.TS, 7)                                                            as YEAR_MONTH
-      , count(distinct USERID)                                                    as UNIQUE_USERS
-      , sum(case when AMOUNT is not null and REFUNDED is false then 1 else 0 end) as PAID_USERS
-      , sum(case when AMOUNT is not null and REFUNDED is false then 1 else 0 end) as CONVERSION_RATE
-      , SUM(case when REFUNDED is true then AMOUNT * -1 else AMOUNT end)          as GROSS_REVENUE
-      , SUM(case when REFUNDED is false then AMOUNT else 0 end)                   as NET_REVENUE
-    from RAW_DATA.CHANNEL                        C
-         left join RAW_DATA.USER_SESSION_CHANNEL USC on C.CHANNELNAME = USC.CHANNEL
-         left join RAW_DATA.SESSION_TRANSACTION  STR on USC.SESSIONID = STR.SESSIONID
-         left join RAW_DATA.SESSION_TIMESTAMP    ST on USC.SESSIONID = ST.SESSIONID
-    group by 1, 2
-    order by 1, 2
+select
+    CHANNELNAME
+  , YEAR_MONTH
+  , UNIQUE_USERS
+  , PAID_USERS
+  , case when PAID_USERS != 0 then ROUND(100.0 * PAID_USERS / UNIQUE_USERS, 2) end as CONVERSION_RATE
+  , GROSS_REVENUE
+  , NET_REVENUE
+from (
+     select
+         C.CHANNELNAME
+       , left(ST.TS, 7)                                                                     as YEAR_MONTH
+       , count(distinct USERID)                                                             as UNIQUE_USERS
+       , count(distinct case when AMOUNT is not null and REFUNDED is false then USERID end) as PAID_USERS
+       , sum(nvl(AMOUNT, 0))                                                                as GROSS_REVENUE
+       , sum(case when REFUNDED is false then AMOUNT else 0 end)                            as NET_REVENUE
+     from RAW_DATA.CHANNEL                        C
+          left join RAW_DATA.USER_SESSION_CHANNEL USC
+                    on C.CHANNELNAME = USC.CHANNEL
+          left join RAW_DATA.SESSION_TRANSACTION  STR on USC.SESSIONID = STR.SESSIONID
+          left join RAW_DATA.SESSION_TIMESTAMP    ST on USC.SESSIONID = ST.SESSIONID
+     group by 1, 2
+     order by 1, 2
+     ) DATAS
 ;
 
 -- 매출액이 없는 채널의 경우 월별로 데이터가 생기지 않으므로 채널별, 월별 조회문과 조인
@@ -361,11 +536,11 @@ from (
          from (
               select
                   C.CHANNELNAME
-                , left(ST.TS, 7)                                                   as YEAR_MONTH
-                , count(distinct USERID)                                           as UNIQUE_USERS
-                , count(distinct case when AMOUNT > 0 then USERID end)             as PAID_USERS
-                , sum(case when REFUNDED is true then AMOUNT * -1 else AMOUNT end) as GROSS_REVENUE
-                , sum(case when REFUNDED is false then AMOUNT else 0 end)          as NET_REVENUE
+                , left(ST.TS, 7)                                                                     as YEAR_MONTH
+                , count(distinct USERID)                                                             as UNIQUE_USERS
+                , count(distinct case when AMOUNT is not null and REFUNDED is false then USERID end) as PAID_USERS
+                , sum(nvl(AMOUNT, 0))                                                                as GROSS_REVENUE
+                , sum(case when REFUNDED is false then AMOUNT else 0 end)                            as NET_REVENUE
               from RAW_DATA.CHANNEL                        C
                    left join RAW_DATA.USER_SESSION_CHANNEL USC
                              on C.CHANNELNAME = USC.CHANNEL
@@ -373,7 +548,7 @@ from (
                    left join RAW_DATA.SESSION_TIMESTAMP    ST on USC.SESSIONID = ST.SESSIONID
               group by 1, 2
               order by 1, 2
-              )
+              ) DATAS
          ) DATAS
          on CHANNEL_MONTHS.CHANNELNAME = DATAS.CHANNELNAME
              and CHANNEL_MONTHS.YEAR_MONTH = DATAS.YEAR_MONTH
@@ -422,11 +597,11 @@ from (
          from (
               select
                   C.CHANNELNAME
-                , left(ST.TS, 7)                                                   as YEAR_MONTH
-                , count(distinct USERID)                                           as UNIQUE_USERS
-                , count(distinct case when AMOUNT > 0 then USERID end)             as PAID_USERS
-                , sum(case when REFUNDED is true then AMOUNT * -1 else AMOUNT end) as GROSS_REVENUE
-                , sum(case when REFUNDED is false then AMOUNT else 0 end)          as NET_REVENUE
+                , left(ST.TS, 7)                                                                     as YEAR_MONTH
+                , count(distinct USERID)                                                             as UNIQUE_USERS
+                , count(distinct case when AMOUNT is not null and REFUNDED is false then USERID end) as PAID_USERS
+                , sum(nvl(AMOUNT, 0))                                                                as GROSS_REVENUE
+                , sum(case when REFUNDED is false then AMOUNT else 0 end)                            as NET_REVENUE
               from RAW_DATA.CHANNEL                        C
                    left join RAW_DATA.USER_SESSION_CHANNEL USC
                              on C.CHANNELNAME = USC.CHANNEL
@@ -434,7 +609,7 @@ from (
                    left join RAW_DATA.SESSION_TIMESTAMP    ST on USC.SESSIONID = ST.SESSIONID
               group by 1, 2
               order by 1, 2
-              )
+              ) DATAS
          ) DATAS
          on CHANNEL_MONTHS.CHANNELNAME = DATAS.CHANNELNAME
              and CHANNEL_MONTHS.YEAR_MONTH = DATAS.YEAR_MONTH
@@ -470,35 +645,35 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>2019-05</td>
         <td>Facebook</td>
         <td>247</td>
-        <td>14</td>
-        <td>5.67</td>
-        <td>795</td>
+        <td>11</td>
+        <td>4.45</td>
+        <td>1199</td>
         <td>997</td>
     </tr>
     <tr>
         <td>2019-05</td>
         <td>Instagram</td>
         <td>234</td>
-        <td>11</td>
-        <td>4.70</td>
-        <td>581</td>
+        <td>9</td>
+        <td>3.85</td>
+        <td>959</td>
         <td>770</td>
     </tr>
     <tr>
         <td>2019-05</td>
         <td>Organic</td>
         <td>238</td>
-        <td>17</td>
-        <td>7.14</td>
-        <td>1296</td>
+        <td>15</td>
+        <td>6.30</td>
+        <td>1846</td>
         <td>1571</td>
     </tr>
     <tr>
         <td>2019-05</td>
         <td>Youtube</td>
         <td>244</td>
-        <td>9</td>
-        <td>3.69</td>
+        <td>10</td>
+        <td>4.10</td>
         <td>529</td>
         <td>529</td>
     </tr>
@@ -533,9 +708,9 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>2019-07</td>
         <td>Facebook</td>
         <td>558</td>
-        <td>32</td>
-        <td>5.73</td>
-        <td>2066</td>
+        <td>31</td>
+        <td>5.56</td>
+        <td>2222</td>
         <td>2144</td>
     </tr>
     <tr>
@@ -544,15 +719,15 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>567</td>
         <td>24</td>
         <td>4.23</td>
-        <td>1636</td>
+        <td>1896</td>
         <td>1766</td>
     </tr>
     <tr>
         <td>2019-07</td>
         <td>Organic</td>
         <td>557</td>
-        <td>22</td>
-        <td>3.95</td>
+        <td>24</td>
+        <td>4.31</td>
         <td>1600</td>
         <td>1600</td>
     </tr>
@@ -560,27 +735,27 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>2019-07</td>
         <td>Youtube</td>
         <td>564</td>
-        <td>36</td>
-        <td>6.38</td>
-        <td>1864</td>
+        <td>34</td>
+        <td>6.03</td>
+        <td>2210</td>
         <td>2037</td>
     </tr>
     <tr>
         <td>2019-08</td>
         <td>Google</td>
         <td>610</td>
-        <td>27</td>
-        <td>4.43</td>
-        <td>1578</td>
+        <td>23</td>
+        <td>3.77</td>
+        <td>2210</td>
         <td>1894</td>
     </tr>
     <tr>
         <td>2019-08</td>
         <td>Naver</td>
         <td>626</td>
-        <td>22</td>
-        <td>3.51</td>
-        <td>1273</td>
+        <td>19</td>
+        <td>3.04</td>
+        <td>1829</td>
         <td>1551</td>
     </tr>
     <tr>
@@ -596,9 +771,9 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>2019-09</td>
         <td>Google</td>
         <td>599</td>
-        <td>25</td>
-        <td>4.17</td>
-        <td>1510</td>
+        <td>23</td>
+        <td>3.84</td>
+        <td>1872</td>
         <td>1691</td>
     </tr>
     <tr>
@@ -623,44 +798,44 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>2019-10</td>
         <td>Facebook</td>
         <td>698</td>
-        <td>29</td>
-        <td>4.15</td>
-        <td>1632</td>
+        <td>28</td>
+        <td>4.01</td>
+        <td>1650</td>
         <td>1641</td>
     </tr>
     <tr>
         <td>2019-10</td>
         <td>Instagram</td>
         <td>707</td>
-        <td>33</td>
-        <td>4.67</td>
-        <td>2222</td>
+        <td>31</td>
+        <td>4.38</td>
+        <td>2568</td>
         <td>2395</td>
     </tr>
     <tr>
         <td>2019-10</td>
         <td>Organic</td>
         <td>709</td>
-        <td>31</td>
-        <td>4.37</td>
-        <td>2454</td>
+        <td>29</td>
+        <td>4.09</td>
+        <td>2762</td>
         <td>2608</td>
     </tr>
     <tr>
         <td>2019-10</td>
         <td>Youtube</td>
         <td>705</td>
-        <td>34</td>
-        <td>4.82</td>
-        <td>2146</td>
+        <td>31</td>
+        <td>4.40</td>
+        <td>2492</td>
         <td>2319</td>
     </tr>
     <tr>
         <td>2019-11</td>
         <td>Facebook</td>
         <td>688</td>
-        <td>25</td>
-        <td>3.63</td>
+        <td>26</td>
+        <td>3.78</td>
         <td>1678</td>
         <td>1678</td>
     </tr>
@@ -677,18 +852,18 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>2019-11</td>
         <td>Organic</td>
         <td>677</td>
-        <td>34</td>
-        <td>5.02</td>
-        <td>1884</td>
+        <td>31</td>
+        <td>4.58</td>
+        <td>2626</td>
         <td>2255</td>
     </tr>
     <tr>
         <td>2019-11</td>
         <td>Youtube</td>
         <td>677</td>
-        <td>45</td>
-        <td>6.65</td>
-        <td>3130</td>
+        <td>44</td>
+        <td>6.50</td>
+        <td>3532</td>
         <td>3331</td>
     </tr>
     <tr>
@@ -704,9 +879,9 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>2019-05</td>
         <td>Naver</td>
         <td>237</td>
-        <td>11</td>
-        <td>4.64</td>
-        <td>821</td>
+        <td>10</td>
+        <td>4.22</td>
+        <td>867</td>
         <td>844</td>
     </tr>
     <tr>
@@ -731,18 +906,18 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>2019-06</td>
         <td>Instagram</td>
         <td>410</td>
-        <td>21</td>
-        <td>5.12</td>
-        <td>1374</td>
+        <td>20</td>
+        <td>4.88</td>
+        <td>1462</td>
         <td>1418</td>
     </tr>
     <tr>
         <td>2019-06</td>
         <td>Organic</td>
         <td>416</td>
-        <td>14</td>
-        <td>3.37</td>
-        <td>751</td>
+        <td>12</td>
+        <td>2.88</td>
+        <td>1129</td>
         <td>940</td>
     </tr>
     <tr>
@@ -758,9 +933,9 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>2019-07</td>
         <td>Google</td>
         <td>556</td>
-        <td>21</td>
-        <td>3.78</td>
-        <td>1212</td>
+        <td>19</td>
+        <td>3.42</td>
+        <td>1558</td>
         <td>1385</td>
     </tr>
     <tr>
@@ -794,27 +969,27 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>2019-08</td>
         <td>Instagram</td>
         <td>621</td>
-        <td>28</td>
-        <td>4.51</td>
-        <td>1873</td>
+        <td>26</td>
+        <td>4.19</td>
+        <td>2129</td>
         <td>2001</td>
     </tr>
     <tr>
         <td>2019-08</td>
         <td>Organic</td>
         <td>608</td>
-        <td>26</td>
-        <td>4.28</td>
-        <td>1569</td>
+        <td>25</td>
+        <td>4.11</td>
+        <td>1643</td>
         <td>1606</td>
     </tr>
     <tr>
         <td>2019-08</td>
         <td>Youtube</td>
         <td>614</td>
-        <td>18</td>
-        <td>2.93</td>
-        <td>913</td>
+        <td>16</td>
+        <td>2.61</td>
+        <td>987</td>
         <td>950</td>
     </tr>
     <tr>
@@ -830,17 +1005,17 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>2019-09</td>
         <td>Instagram</td>
         <td>588</td>
-        <td>20</td>
-        <td>3.40</td>
-        <td>984</td>
+        <td>18</td>
+        <td>3.06</td>
+        <td>1260</td>
         <td>1122</td>
     </tr>
     <tr>
         <td>2019-09</td>
         <td>Organic</td>
         <td>592</td>
-        <td>22</td>
-        <td>3.72</td>
+        <td>23</td>
+        <td>3.89</td>
         <td>1267</td>
         <td>1267</td>
     </tr>
@@ -857,9 +1032,9 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>2019-10</td>
         <td>Google</td>
         <td>699</td>
-        <td>30</td>
-        <td>4.29</td>
-        <td>2046</td>
+        <td>29</td>
+        <td>4.15</td>
+        <td>2150</td>
         <td>2098</td>
     </tr>
     <tr>
@@ -884,18 +1059,18 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>2019-11</td>
         <td>Google</td>
         <td>688</td>
-        <td>26</td>
-        <td>3.78</td>
-        <td>2184</td>
+        <td>25</td>
+        <td>3.63</td>
+        <td>2286</td>
         <td>2235</td>
     </tr>
     <tr>
         <td>2019-11</td>
         <td>Naver</td>
         <td>667</td>
-        <td>26</td>
-        <td>3.90</td>
-        <td>1740</td>
+        <td>23</td>
+        <td>3.45</td>
+        <td>2234</td>
         <td>1987</td>
     </tr>
     <tr>
