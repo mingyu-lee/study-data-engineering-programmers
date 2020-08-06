@@ -24,10 +24,6 @@ sqlalchemy.create_engine(sql_conn_str)
 %sql $sql_conn_str
 ```
 
-    The sql extension is already loaded. To reload it, use:
-      %reload_ext sql
-
-
 
 ```python
 %%sql
@@ -331,11 +327,11 @@ limit 10
 select
     CHANNEL_MONTHS.YEAR_MONTH
   , CHANNEL_MONTHS.CHANNELNAME
-  , NVL(UNIQUE_USERS, 0)    as UNIQUE_USERS
-  , NVL(PAID_USERS, 0)      as PAID_USERS
-  , NVL(CONVERSION_RATE, 0) as CONVERSION_RATE
-  , NVL(GROSS_REVENUE, 0)   as GROSS_REVENUE
-  , NVL(NET_REVENUE, 0)     as NET_REVENUE
+  , nvl(UNIQUE_USERS, 0)    as UNIQUE_USERS
+  , nvl(PAID_USERS, 0)      as PAID_USERS
+  , nvl(CONVERSION_RATE, 0) as CONVERSION_RATE
+  , nvl(GROSS_REVENUE, 0)   as GROSS_REVENUE
+  , nvl(NET_REVENUE, 0)     as NET_REVENUE
 from (
      select
          CHANNELNAME
@@ -348,26 +344,36 @@ from (
           cross join
               (
               select distinct
-                  LEFT(TS, 7) as YEAR_MONTH
+                  left(TS, 7) as YEAR_MONTH
               from RAW_DATA.SESSION_TIMESTAMP
               ) MONTHS
      )     CHANNEL_MONTHS
      left join
          (
          select
-             C.CHANNELNAME
-           , LEFT(ST.TS, 7)                                                            as YEAR_MONTH
-           , count(distinct USERID)                                                    as UNIQUE_USERS
-           , sum(case when AMOUNT is not null and REFUNDED is false then 1 else 0 end) as PAID_USERS
-           , sum(case when AMOUNT is not null and REFUNDED is false then 1 else 0 end) as CONVERSION_RATE
-           , SUM(case when REFUNDED is true then AMOUNT * -1 else AMOUNT end)          as GROSS_REVENUE
-           , SUM(case when REFUNDED is false then AMOUNT else 0 end)                   as NET_REVENUE
-         from RAW_DATA.CHANNEL                        C
-              left join RAW_DATA.USER_SESSION_CHANNEL USC on C.CHANNELNAME = USC.CHANNEL
-              left join RAW_DATA.SESSION_TRANSACTION  STR on USC.SESSIONID = STR.SESSIONID
-              left join RAW_DATA.SESSION_TIMESTAMP    ST on USC.SESSIONID = ST.SESSIONID
-         group by 1, 2
-         order by 1, 2
+             CHANNELNAME
+           , YEAR_MONTH
+           , UNIQUE_USERS
+           , PAID_USERS
+           , case when PAID_USERS != 0 then ROUND(100.0 * PAID_USERS / UNIQUE_USERS, 2) end as CONVERSION_RATE
+           , GROSS_REVENUE
+           , NET_REVENUE
+         from (
+              select
+                  C.CHANNELNAME
+                , left(ST.TS, 7)                                                   as YEAR_MONTH
+                , count(distinct USERID)                                           as UNIQUE_USERS
+                , count(distinct case when AMOUNT > 0 then USERID end)             as PAID_USERS
+                , sum(case when REFUNDED is true then AMOUNT * -1 else AMOUNT end) as GROSS_REVENUE
+                , sum(case when REFUNDED is false then AMOUNT else 0 end)          as NET_REVENUE
+              from RAW_DATA.CHANNEL                        C
+                   left join RAW_DATA.USER_SESSION_CHANNEL USC
+                             on C.CHANNELNAME = USC.CHANNEL
+                   left join RAW_DATA.SESSION_TRANSACTION  STR on USC.SESSIONID = STR.SESSIONID
+                   left join RAW_DATA.SESSION_TIMESTAMP    ST on USC.SESSIONID = ST.SESSIONID
+              group by 1, 2
+              order by 1, 2
+              )
          ) DATAS
          on CHANNEL_MONTHS.CHANNELNAME = DATAS.CHANNELNAME
              and CHANNEL_MONTHS.YEAR_MONTH = DATAS.YEAR_MONTH
@@ -382,11 +388,11 @@ create table ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL as
 select
     CHANNEL_MONTHS.YEAR_MONTH
   , CHANNEL_MONTHS.CHANNELNAME
-  , NVL(UNIQUE_USERS, 0)    as UNIQUE_USERS
-  , NVL(PAID_USERS, 0)      as PAID_USERS
-  , NVL(CONVERSION_RATE, 0) as CONVERSION_RATE
-  , NVL(GROSS_REVENUE, 0)   as GROSS_REVENUE
-  , NVL(NET_REVENUE, 0)     as NET_REVENUE
+  , nvl(UNIQUE_USERS, 0)    as UNIQUE_USERS
+  , nvl(PAID_USERS, 0)      as PAID_USERS
+  , nvl(CONVERSION_RATE, 0) as CONVERSION_RATE
+  , nvl(GROSS_REVENUE, 0)   as GROSS_REVENUE
+  , nvl(NET_REVENUE, 0)     as NET_REVENUE
 from (
      select
          CHANNELNAME
@@ -399,26 +405,36 @@ from (
           cross join
               (
               select distinct
-                  LEFT(TS, 7) as YEAR_MONTH
+                  left(TS, 7) as YEAR_MONTH
               from RAW_DATA.SESSION_TIMESTAMP
               ) MONTHS
      )     CHANNEL_MONTHS
      left join
          (
          select
-             C.CHANNELNAME
-           , LEFT(ST.TS, 7)                                                            as YEAR_MONTH
-           , count(distinct USERID)                                                    as UNIQUE_USERS
-           , sum(case when AMOUNT is not null and REFUNDED is false then 1 else 0 end) as PAID_USERS
-           , sum(case when AMOUNT is not null and REFUNDED is false then 1 else 0 end) as CONVERSION_RATE
-           , SUM(case when REFUNDED is true then AMOUNT * -1 else AMOUNT end)          as GROSS_REVENUE
-           , SUM(case when REFUNDED is false then AMOUNT else 0 end)                   as NET_REVENUE
-         from RAW_DATA.CHANNEL                        C
-              left join RAW_DATA.USER_SESSION_CHANNEL USC on C.CHANNELNAME = USC.CHANNEL
-              left join RAW_DATA.SESSION_TRANSACTION  STR on USC.SESSIONID = STR.SESSIONID
-              left join RAW_DATA.SESSION_TIMESTAMP    ST on USC.SESSIONID = ST.SESSIONID
-         group by 1, 2
-         order by 1, 2
+             CHANNELNAME
+           , YEAR_MONTH
+           , UNIQUE_USERS
+           , PAID_USERS
+           , case when PAID_USERS != 0 then ROUND(100.0 * PAID_USERS / UNIQUE_USERS, 2) end as CONVERSION_RATE
+           , GROSS_REVENUE
+           , NET_REVENUE
+         from (
+              select
+                  C.CHANNELNAME
+                , left(ST.TS, 7)                                                   as YEAR_MONTH
+                , count(distinct USERID)                                           as UNIQUE_USERS
+                , count(distinct case when AMOUNT > 0 then USERID end)             as PAID_USERS
+                , sum(case when REFUNDED is true then AMOUNT * -1 else AMOUNT end) as GROSS_REVENUE
+                , sum(case when REFUNDED is false then AMOUNT else 0 end)          as NET_REVENUE
+              from RAW_DATA.CHANNEL                        C
+                   left join RAW_DATA.USER_SESSION_CHANNEL USC
+                             on C.CHANNELNAME = USC.CHANNEL
+                   left join RAW_DATA.SESSION_TRANSACTION  STR on USC.SESSIONID = STR.SESSIONID
+                   left join RAW_DATA.SESSION_TIMESTAMP    ST on USC.SESSIONID = ST.SESSIONID
+              group by 1, 2
+              order by 1, 2
+              )
          ) DATAS
          on CHANNEL_MONTHS.CHANNELNAME = DATAS.CHANNELNAME
              and CHANNEL_MONTHS.YEAR_MONTH = DATAS.YEAR_MONTH
@@ -452,226 +468,10 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
     </tr>
     <tr>
         <td>2019-05</td>
-        <td>Google</td>
-        <td>253</td>
-        <td>10</td>
-        <td>10</td>
-        <td>580</td>
-        <td>580</td>
-    </tr>
-    <tr>
-        <td>2019-05</td>
-        <td>Naver</td>
-        <td>237</td>
-        <td>10</td>
-        <td>10</td>
-        <td>821</td>
-        <td>844</td>
-    </tr>
-    <tr>
-        <td>2019-05</td>
-        <td>TIKTOK</td>
-        <td>0</td>
-        <td>0</td>
-        <td>0</td>
-        <td>0</td>
-        <td>0</td>
-    </tr>
-    <tr>
-        <td>2019-06</td>
-        <td>Facebook</td>
-        <td>414</td>
-        <td>22</td>
-        <td>22</td>
-        <td>1578</td>
-        <td>1578</td>
-    </tr>
-    <tr>
-        <td>2019-06</td>
-        <td>Instagram</td>
-        <td>410</td>
-        <td>20</td>
-        <td>20</td>
-        <td>1374</td>
-        <td>1418</td>
-    </tr>
-    <tr>
-        <td>2019-06</td>
-        <td>Organic</td>
-        <td>416</td>
-        <td>12</td>
-        <td>12</td>
-        <td>751</td>
-        <td>940</td>
-    </tr>
-    <tr>
-        <td>2019-06</td>
-        <td>Youtube</td>
-        <td>400</td>
-        <td>17</td>
-        <td>17</td>
-        <td>1042</td>
-        <td>1042</td>
-    </tr>
-    <tr>
-        <td>2019-07</td>
-        <td>Google</td>
-        <td>556</td>
-        <td>19</td>
-        <td>19</td>
-        <td>1212</td>
-        <td>1385</td>
-    </tr>
-    <tr>
-        <td>2019-07</td>
-        <td>Naver</td>
-        <td>553</td>
-        <td>19</td>
-        <td>19</td>
-        <td>1547</td>
-        <td>1547</td>
-    </tr>
-    <tr>
-        <td>2019-07</td>
-        <td>TIKTOK</td>
-        <td>0</td>
-        <td>0</td>
-        <td>0</td>
-        <td>0</td>
-        <td>0</td>
-    </tr>
-    <tr>
-        <td>2019-08</td>
-        <td>Facebook</td>
-        <td>611</td>
-        <td>19</td>
-        <td>19</td>
-        <td>1009</td>
-        <td>1009</td>
-    </tr>
-    <tr>
-        <td>2019-08</td>
-        <td>Instagram</td>
-        <td>621</td>
-        <td>27</td>
-        <td>27</td>
-        <td>1873</td>
-        <td>2001</td>
-    </tr>
-    <tr>
-        <td>2019-08</td>
-        <td>Organic</td>
-        <td>608</td>
-        <td>26</td>
-        <td>26</td>
-        <td>1569</td>
-        <td>1606</td>
-    </tr>
-    <tr>
-        <td>2019-08</td>
-        <td>Youtube</td>
-        <td>614</td>
-        <td>16</td>
-        <td>16</td>
-        <td>913</td>
-        <td>950</td>
-    </tr>
-    <tr>
-        <td>2019-09</td>
-        <td>Facebook</td>
-        <td>597</td>
-        <td>29</td>
-        <td>29</td>
-        <td>2270</td>
-        <td>2270</td>
-    </tr>
-    <tr>
-        <td>2019-09</td>
-        <td>Instagram</td>
-        <td>588</td>
-        <td>18</td>
-        <td>18</td>
-        <td>984</td>
-        <td>1122</td>
-    </tr>
-    <tr>
-        <td>2019-09</td>
-        <td>Organic</td>
-        <td>592</td>
-        <td>23</td>
-        <td>23</td>
-        <td>1267</td>
-        <td>1267</td>
-    </tr>
-    <tr>
-        <td>2019-09</td>
-        <td>Youtube</td>
-        <td>588</td>
-        <td>16</td>
-        <td>16</td>
-        <td>1301</td>
-        <td>1301</td>
-    </tr>
-    <tr>
-        <td>2019-10</td>
-        <td>Google</td>
-        <td>699</td>
-        <td>30</td>
-        <td>30</td>
-        <td>2046</td>
-        <td>2098</td>
-    </tr>
-    <tr>
-        <td>2019-10</td>
-        <td>Naver</td>
-        <td>713</td>
-        <td>33</td>
-        <td>33</td>
-        <td>2695</td>
-        <td>2695</td>
-    </tr>
-    <tr>
-        <td>2019-10</td>
-        <td>TIKTOK</td>
-        <td>0</td>
-        <td>0</td>
-        <td>0</td>
-        <td>0</td>
-        <td>0</td>
-    </tr>
-    <tr>
-        <td>2019-11</td>
-        <td>Google</td>
-        <td>688</td>
-        <td>25</td>
-        <td>25</td>
-        <td>2184</td>
-        <td>2235</td>
-    </tr>
-    <tr>
-        <td>2019-11</td>
-        <td>Naver</td>
-        <td>667</td>
-        <td>23</td>
-        <td>23</td>
-        <td>1740</td>
-        <td>1987</td>
-    </tr>
-    <tr>
-        <td>2019-11</td>
-        <td>TIKTOK</td>
-        <td>0</td>
-        <td>0</td>
-        <td>0</td>
-        <td>0</td>
-        <td>0</td>
-    </tr>
-    <tr>
-        <td>2019-05</td>
         <td>Facebook</td>
         <td>247</td>
-        <td>11</td>
-        <td>11</td>
+        <td>14</td>
+        <td>5.67</td>
         <td>795</td>
         <td>997</td>
     </tr>
@@ -679,8 +479,8 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>2019-05</td>
         <td>Instagram</td>
         <td>234</td>
-        <td>9</td>
-        <td>9</td>
+        <td>11</td>
+        <td>4.70</td>
         <td>581</td>
         <td>770</td>
     </tr>
@@ -688,8 +488,8 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>2019-05</td>
         <td>Organic</td>
         <td>238</td>
-        <td>16</td>
-        <td>16</td>
+        <td>17</td>
+        <td>7.14</td>
         <td>1296</td>
         <td>1571</td>
     </tr>
@@ -697,8 +497,8 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>2019-05</td>
         <td>Youtube</td>
         <td>244</td>
-        <td>10</td>
-        <td>10</td>
+        <td>9</td>
+        <td>3.69</td>
         <td>529</td>
         <td>529</td>
     </tr>
@@ -707,7 +507,7 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>Google</td>
         <td>412</td>
         <td>13</td>
-        <td>13</td>
+        <td>3.16</td>
         <td>947</td>
         <td>947</td>
     </tr>
@@ -715,8 +515,8 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>2019-06</td>
         <td>Naver</td>
         <td>398</td>
-        <td>16</td>
-        <td>16</td>
+        <td>15</td>
+        <td>3.77</td>
         <td>1090</td>
         <td>1090</td>
     </tr>
@@ -725,7 +525,7 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>TIKTOK</td>
         <td>0</td>
         <td>0</td>
-        <td>0</td>
+        <td>0.00</td>
         <td>0</td>
         <td>0</td>
     </tr>
@@ -733,8 +533,8 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>2019-07</td>
         <td>Facebook</td>
         <td>558</td>
-        <td>31</td>
-        <td>31</td>
+        <td>32</td>
+        <td>5.73</td>
         <td>2066</td>
         <td>2144</td>
     </tr>
@@ -743,7 +543,7 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>Instagram</td>
         <td>567</td>
         <td>24</td>
-        <td>24</td>
+        <td>4.23</td>
         <td>1636</td>
         <td>1766</td>
     </tr>
@@ -751,8 +551,8 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>2019-07</td>
         <td>Organic</td>
         <td>557</td>
-        <td>24</td>
-        <td>24</td>
+        <td>22</td>
+        <td>3.95</td>
         <td>1600</td>
         <td>1600</td>
     </tr>
@@ -760,8 +560,8 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>2019-07</td>
         <td>Youtube</td>
         <td>564</td>
-        <td>34</td>
-        <td>34</td>
+        <td>36</td>
+        <td>6.38</td>
         <td>1864</td>
         <td>2037</td>
     </tr>
@@ -769,8 +569,8 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>2019-08</td>
         <td>Google</td>
         <td>610</td>
-        <td>24</td>
-        <td>24</td>
+        <td>27</td>
+        <td>4.43</td>
         <td>1578</td>
         <td>1894</td>
     </tr>
@@ -778,8 +578,8 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>2019-08</td>
         <td>Naver</td>
         <td>626</td>
-        <td>19</td>
-        <td>19</td>
+        <td>22</td>
+        <td>3.51</td>
         <td>1273</td>
         <td>1551</td>
     </tr>
@@ -788,7 +588,7 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>TIKTOK</td>
         <td>0</td>
         <td>0</td>
-        <td>0</td>
+        <td>0.00</td>
         <td>0</td>
         <td>0</td>
     </tr>
@@ -796,8 +596,8 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>2019-09</td>
         <td>Google</td>
         <td>599</td>
-        <td>23</td>
-        <td>23</td>
+        <td>25</td>
+        <td>4.17</td>
         <td>1510</td>
         <td>1691</td>
     </tr>
@@ -806,7 +606,7 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>Naver</td>
         <td>592</td>
         <td>21</td>
-        <td>21</td>
+        <td>3.55</td>
         <td>1996</td>
         <td>1996</td>
     </tr>
@@ -815,7 +615,7 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>TIKTOK</td>
         <td>0</td>
         <td>0</td>
-        <td>0</td>
+        <td>0.00</td>
         <td>0</td>
         <td>0</td>
     </tr>
@@ -823,8 +623,8 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>2019-10</td>
         <td>Facebook</td>
         <td>698</td>
-        <td>28</td>
-        <td>28</td>
+        <td>29</td>
+        <td>4.15</td>
         <td>1632</td>
         <td>1641</td>
     </tr>
@@ -833,7 +633,7 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>Instagram</td>
         <td>707</td>
         <td>33</td>
-        <td>33</td>
+        <td>4.67</td>
         <td>2222</td>
         <td>2395</td>
     </tr>
@@ -841,8 +641,8 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>2019-10</td>
         <td>Organic</td>
         <td>709</td>
-        <td>30</td>
-        <td>30</td>
+        <td>31</td>
+        <td>4.37</td>
         <td>2454</td>
         <td>2608</td>
     </tr>
@@ -850,8 +650,8 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>2019-10</td>
         <td>Youtube</td>
         <td>705</td>
-        <td>33</td>
-        <td>33</td>
+        <td>34</td>
+        <td>4.82</td>
         <td>2146</td>
         <td>2319</td>
     </tr>
@@ -859,8 +659,8 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>2019-11</td>
         <td>Facebook</td>
         <td>688</td>
-        <td>26</td>
-        <td>26</td>
+        <td>25</td>
+        <td>3.63</td>
         <td>1678</td>
         <td>1678</td>
     </tr>
@@ -868,8 +668,8 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>2019-11</td>
         <td>Instagram</td>
         <td>669</td>
-        <td>26</td>
-        <td>26</td>
+        <td>25</td>
+        <td>3.74</td>
         <td>2116</td>
         <td>2116</td>
     </tr>
@@ -877,8 +677,8 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>2019-11</td>
         <td>Organic</td>
         <td>677</td>
-        <td>31</td>
-        <td>31</td>
+        <td>34</td>
+        <td>5.02</td>
         <td>1884</td>
         <td>2255</td>
     </tr>
@@ -886,10 +686,226 @@ select * from ADHOC.MINGYU_MONTHLY_REVENUE_CHANNEL;
         <td>2019-11</td>
         <td>Youtube</td>
         <td>677</td>
-        <td>46</td>
-        <td>46</td>
+        <td>45</td>
+        <td>6.65</td>
         <td>3130</td>
         <td>3331</td>
+    </tr>
+    <tr>
+        <td>2019-05</td>
+        <td>Google</td>
+        <td>253</td>
+        <td>10</td>
+        <td>3.95</td>
+        <td>580</td>
+        <td>580</td>
+    </tr>
+    <tr>
+        <td>2019-05</td>
+        <td>Naver</td>
+        <td>237</td>
+        <td>11</td>
+        <td>4.64</td>
+        <td>821</td>
+        <td>844</td>
+    </tr>
+    <tr>
+        <td>2019-05</td>
+        <td>TIKTOK</td>
+        <td>0</td>
+        <td>0</td>
+        <td>0.00</td>
+        <td>0</td>
+        <td>0</td>
+    </tr>
+    <tr>
+        <td>2019-06</td>
+        <td>Facebook</td>
+        <td>414</td>
+        <td>22</td>
+        <td>5.31</td>
+        <td>1578</td>
+        <td>1578</td>
+    </tr>
+    <tr>
+        <td>2019-06</td>
+        <td>Instagram</td>
+        <td>410</td>
+        <td>21</td>
+        <td>5.12</td>
+        <td>1374</td>
+        <td>1418</td>
+    </tr>
+    <tr>
+        <td>2019-06</td>
+        <td>Organic</td>
+        <td>416</td>
+        <td>14</td>
+        <td>3.37</td>
+        <td>751</td>
+        <td>940</td>
+    </tr>
+    <tr>
+        <td>2019-06</td>
+        <td>Youtube</td>
+        <td>400</td>
+        <td>17</td>
+        <td>4.25</td>
+        <td>1042</td>
+        <td>1042</td>
+    </tr>
+    <tr>
+        <td>2019-07</td>
+        <td>Google</td>
+        <td>556</td>
+        <td>21</td>
+        <td>3.78</td>
+        <td>1212</td>
+        <td>1385</td>
+    </tr>
+    <tr>
+        <td>2019-07</td>
+        <td>Naver</td>
+        <td>553</td>
+        <td>19</td>
+        <td>3.44</td>
+        <td>1547</td>
+        <td>1547</td>
+    </tr>
+    <tr>
+        <td>2019-07</td>
+        <td>TIKTOK</td>
+        <td>0</td>
+        <td>0</td>
+        <td>0.00</td>
+        <td>0</td>
+        <td>0</td>
+    </tr>
+    <tr>
+        <td>2019-08</td>
+        <td>Facebook</td>
+        <td>611</td>
+        <td>18</td>
+        <td>2.95</td>
+        <td>1009</td>
+        <td>1009</td>
+    </tr>
+    <tr>
+        <td>2019-08</td>
+        <td>Instagram</td>
+        <td>621</td>
+        <td>28</td>
+        <td>4.51</td>
+        <td>1873</td>
+        <td>2001</td>
+    </tr>
+    <tr>
+        <td>2019-08</td>
+        <td>Organic</td>
+        <td>608</td>
+        <td>26</td>
+        <td>4.28</td>
+        <td>1569</td>
+        <td>1606</td>
+    </tr>
+    <tr>
+        <td>2019-08</td>
+        <td>Youtube</td>
+        <td>614</td>
+        <td>18</td>
+        <td>2.93</td>
+        <td>913</td>
+        <td>950</td>
+    </tr>
+    <tr>
+        <td>2019-09</td>
+        <td>Facebook</td>
+        <td>597</td>
+        <td>27</td>
+        <td>4.52</td>
+        <td>2270</td>
+        <td>2270</td>
+    </tr>
+    <tr>
+        <td>2019-09</td>
+        <td>Instagram</td>
+        <td>588</td>
+        <td>20</td>
+        <td>3.40</td>
+        <td>984</td>
+        <td>1122</td>
+    </tr>
+    <tr>
+        <td>2019-09</td>
+        <td>Organic</td>
+        <td>592</td>
+        <td>22</td>
+        <td>3.72</td>
+        <td>1267</td>
+        <td>1267</td>
+    </tr>
+    <tr>
+        <td>2019-09</td>
+        <td>Youtube</td>
+        <td>588</td>
+        <td>15</td>
+        <td>2.55</td>
+        <td>1301</td>
+        <td>1301</td>
+    </tr>
+    <tr>
+        <td>2019-10</td>
+        <td>Google</td>
+        <td>699</td>
+        <td>30</td>
+        <td>4.29</td>
+        <td>2046</td>
+        <td>2098</td>
+    </tr>
+    <tr>
+        <td>2019-10</td>
+        <td>Naver</td>
+        <td>713</td>
+        <td>32</td>
+        <td>4.49</td>
+        <td>2695</td>
+        <td>2695</td>
+    </tr>
+    <tr>
+        <td>2019-10</td>
+        <td>TIKTOK</td>
+        <td>0</td>
+        <td>0</td>
+        <td>0.00</td>
+        <td>0</td>
+        <td>0</td>
+    </tr>
+    <tr>
+        <td>2019-11</td>
+        <td>Google</td>
+        <td>688</td>
+        <td>26</td>
+        <td>3.78</td>
+        <td>2184</td>
+        <td>2235</td>
+    </tr>
+    <tr>
+        <td>2019-11</td>
+        <td>Naver</td>
+        <td>667</td>
+        <td>26</td>
+        <td>3.90</td>
+        <td>1740</td>
+        <td>1987</td>
+    </tr>
+    <tr>
+        <td>2019-11</td>
+        <td>TIKTOK</td>
+        <td>0</td>
+        <td>0</td>
+        <td>0.00</td>
+        <td>0</td>
+        <td>0</td>
     </tr>
 </table>
 
