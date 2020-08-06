@@ -380,17 +380,18 @@ limit 10
 * 기영님 피드백 쿼리와 기존 제출 쿼리의 결과는 같지만, REFUNDED를 판별하는 과정이 다름
 * 기존 제출의 경우 REFUNDED 일 경우 AMOUNT * -1을 통해 (실제 환불하는 것처럼) SUM에서 환불된 경우 AMOUNT 만큼 빼준 것
 * 피드백의 경우 단순히 생각해서 REFUNDED 일 때 0이므로, REFUNDED false 인 경우에만 AMOUNT 합계 계산
+* 기존 제출문의 경우 NET_REVENUE를 작성한 것이었다. GROSS_REVENUE로 변경 완료
 
 
 ```python
 %%sql
 select
     USERID
-  , TOTAL_REVENUE
+  , GROSS_REVENUE
 from (
      select
          USERID
-       , sum(case when REFUNDED is false then AMOUNT else 0 end) as TOTAL_REVENUE
+       , sum(nvl(AMOUNT, 0)) as GROSS_REVENUE
      from RAW_DATA.SESSION_TRANSACTION       ST
           join RAW_DATA.USER_SESSION_CHANNEL USC on USC.SESSIONID = ST.SESSIONID
      group by 1
@@ -410,7 +411,7 @@ limit 10
 <table>
     <tr>
         <th>userid</th>
-        <th>total_revenue</th>
+        <th>gross_revenue</th>
     </tr>
     <tr>
         <td>989</td>
@@ -441,16 +442,16 @@ limit 10
         <td>422</td>
     </tr>
     <tr>
+        <td>1099</td>
+        <td>421</td>
+    </tr>
+    <tr>
         <td>2682</td>
         <td>414</td>
     </tr>
     <tr>
         <td>891</td>
         <td>412</td>
-    </tr>
-    <tr>
-        <td>1085</td>
-        <td>411</td>
     </tr>
 </table>
 
